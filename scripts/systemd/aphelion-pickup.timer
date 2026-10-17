@@ -1,0 +1,22 @@
+# User timer for aphelion-pickup.service. Install notes are in the service
+# file. Not enabled by anything in this repo.
+#
+# Open decision (ADR 0010: the orchestration driver; the Blueprint says only
+# "every few minutes"): the tick interval. 5min below is a placeholder.
+# Override it without editing this file:
+#   systemctl --user edit aphelion-pickup.timer
+#   [Timer]
+#   OnActiveSec=<interval>
+#   OnUnitActiveSec=<interval>
+
+[Unit]
+Description=aphelion pickup driver timer
+
+[Timer]
+# First tick after the timer starts, then one per interval after each tick.
+OnActiveSec=5min
+OnUnitActiveSec=5min
+Unit=aphelion-pickup.service
+
+[Install]
+WantedBy=timers.target

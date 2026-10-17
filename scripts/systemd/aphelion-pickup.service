@@ -1,0 +1,30 @@
+# User unit: one tick of the local pickup driver (ADR 0010; Blueprint: "fired
+# every few minutes by a user-level timer with your existing gh login").
+# Started by aphelion-pickup.timer. Not enabled by anything in this repo.
+#
+# Install, as the owner (not root):
+#   mkdir -p ~/.config/systemd/user ~/.config/aphelion
+#   cp scripts/systemd/aphelion-pickup.service scripts/systemd/aphelion-pickup.timer ~/.config/systemd/user/
+#   printf 'APHELION_CLONE=%s\n' "$PWD" > ~/.config/aphelion/pickup.env
+#   systemctl --user daemon-reload
+#   systemctl --user enable --now aphelion-pickup.timer
+# pickup.env may also set APHELION_REPO, APHELION_MAX_RUNS,
+# APHELION_MAX_TURNS and APHELION_SKILL_NS (see the scripts' headers).
+# User units stop at logout unless lingering is on: loginctl enable-linger "$USER"
+# Logs: journalctl --user -u aphelion-pickup; per-run logs under
+# .git/aphelion/runs/ in the clone.
+
+[Unit]
+Description=aphelion pickup driver tick
+
+[Service]
+Type=oneshot
+EnvironmentFile=%h/.config/aphelion/pickup.env
+# claude and go live in ~/.local/bin on megatron; gh and jq in /usr/bin.
+Environment=PATH=%h/.local/bin:/usr/local/bin:/usr/bin:/bin
+# Clean up worktrees of merged or closed PRs, then dispatch.
+ExecStart=/usr/bin/env bash ${APHELION_CLONE}/scripts/pickup.sh --reconcile
+ExecStart=/usr/bin/env bash ${APHELION_CLONE}/scripts/pickup.sh
+# Runs started by a tick are detached children; KillMode=process lets them
+# keep running after the tick's main process exits.
+KillMode=process
