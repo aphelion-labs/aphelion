@@ -1,0 +1,21 @@
+# Path labels on PRs (Blueprint label taxonomy: area: from path globs; cap: per
+# capability). Rules: .github/labeler.yml.
+# pull_request_target so fork PRs can be labelled too. Safe here: the job
+# checks out nothing and runs no PR code; the labeler reads its config from the
+# base branch through the API.
+name: labeler
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened]
+
+permissions: {}
+
+jobs:
+  labeler:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/labeler@bf12e9b00b37c5c0ca2b87b79b2daf7891dbda13 # v7.0.0

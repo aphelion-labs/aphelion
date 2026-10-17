@@ -1,0 +1,41 @@
+# Weekly, grouped updates (Blueprint, "Dependabot"). Dependabot PRs have no
+# issue and no change folder, and every step treats that as normal.
+# Commit prefixes make each PR title a valid Conventional Commit for
+# pr-title.yml: deps for Go modules (listed under Dependencies in release
+# notes), ci for workflow actions (hidden from release notes).
+version: 2
+updates:
+  - package-ecosystem: gomod
+    directory: /
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: deps
+    labels: ["type:deps", "area:deps"]
+    # A module goes to the first group whose pattern matches it.
+    groups:
+      # modernc.org/sqlite requires an exact modernc.org/libc version, so the
+      # two must move together (Blueprint, "Storage" and "Dependabot").
+      sqlite:
+        patterns:
+          - modernc.org/sqlite
+          - modernc.org/libc
+      # The TUI libraries (Blueprint, "Dependabot": one group for them).
+      tui:
+        patterns:
+          - charm.land/*
+          - github.com/charmbracelet/*
+      go-modules:
+        patterns:
+          - "*"
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: ci
+    labels: ["type:ci", "area:ci"]
+    groups:
+      actions:
+        patterns:
+          - "*"
