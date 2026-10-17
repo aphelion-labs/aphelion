@@ -1,0 +1,161 @@
+# Review responder (ADR 0010): a fresh agent for each review round, on a
+# GitHub-hosted runner, through anthropics/claude-code-action on the owner's
+# Max plan (secret CLAUDE_CODE_OAUTH_TOKEN, made with `claude setup-token`).
+# No handoff from the implementer; it reads only what any reviewer can read.
+#
+# GITHUB_TOKEN trap: reviews and comments posted with a workflow's GITHUB_TOKEN
+# start no workflow runs, so they never reach this workflow. The reviewer bot
+# must post with a GitHub App token or a PAT (ADR 0010, ADR 0011).
+#
+# Config on the runner: only repository-level CLAUDE.md, .claude/ settings,
+# hooks and skills load; the owner's user-level config never does. The action
+# restores .claude/, CLAUDE.md and .mcp.json from the PR's base branch before
+# Claude starts and keeps the PR's copies under .claude-pr/ (claude-code-action
+# docs/security.md at v1.0.252).
+#
+# Review events run this file as it exists on the PR's merge ref, which is
+# why the same-repo guard below matters as much as the missing fork secrets.
+#
+# Needs: the Claude GitHub App installed on the repository (the action pushes
+# with its token, and pushes made with it start CI, unlike GITHUB_TOKEN);
+# secret CLAUDE_CODE_OAUTH_TOKEN; variable REVIEW_BOT_LOGIN once the bot exists.
+#
+# Repository variables:
+# - REVIEW_BOT_LOGIN: the reviewer bot's login, for example
+#   aphelion-pr-bot[bot]. Open decision until the bot exists (ADR 0011: App
+#   or PAT). Empty means only the owner's reviews start a round.
+# - RESPONDER_MARKER: text in a review or comment body that asks for a round.
+#   The bot only posts COMMENT reviews (ADR 0011) and the owner cannot request
+#   changes on PRs opened under the owner's account, so the marker is the usual
+#   trigger. Open decision: the default /respond.
+# - RESPONDER_MAX_ROUNDS: round cap. Open decision (ADR 0010); the default 2 is
+#   the Blueprint's recommendation of two automated rounds.
+name: respond
+
+on:
+  pull_request_review:
+    types: [submitted]
+  pull_request_review_comment:
+    types: [created]
+
+permissions: {}
+
+jobs:
+  respond:
+    # Same-repo head only, so fork PRs never run this (ADR 0010); not a draft;
+    # changes requested or the marker present; author is the owner or the bot.
+    # The bot check refuses '*' (ADR 0010: allowed_bots names one login).
+    if: >-
+      github.event.pull_request.draft == false
+      && github.event.pull_request.head.repo.full_name == github.repository
+      && (
+        github.event.review.state == 'changes_requested'
+        || contains(github.event.review.body || github.event.comment.body || '', vars.RESPONDER_MARKER || '/respond')
+      )
+      && (
+        (github.event.review.user.login || github.event.comment.user.login) == 'arnav-exe'
+        || (
+          vars.REVIEW_BOT_LOGIN != '' && vars.REVIEW_BOT_LOGIN != '*'
+          && (github.event.review.user.login || github.event.comment.user.login) == vars.REVIEW_BOT_LOGIN
+        )
+      )
+    runs-on: ubuntu-24.04
+    # One round at a time per PR; a later trigger waits and never cancels a
+    # running round (ADR 0010). Job-level, so runs whose `if` is false never
+    # take the slot from a real trigger.
+    concurrency:
+      group: responder-${{ github.event.pull_request.number }}
+      cancel-in-progress: false
+    permissions:
+      contents: read # checkout; pushes use the Claude GitHub App token
+      pull-requests: write # count rounds, add review:exhausted
+      actions: read # CI results
+      checks: read # CI results
+      id-token: write # the action exchanges this for its GitHub App token
+    env:
+      GH_TOKEN: ${{ github.token }}
+      REPO: ${{ github.repository }}
+      PR: ${{ github.event.pull_request.number }}
+      RESPONDER_MAX_ROUNDS: ${{ vars.RESPONDER_MAX_ROUNDS || '2' }}
+    steps:
+      # Each round leaves one PR comment starting with
+      # <!-- aphelion-responder round=N -->. A forged marker can only stop
+      # the responder early, never extend it, because the highest N counts.
+      - name: count rounds
+        id: rounds
+        run: |
+          done_rounds=$(gh api --paginate "repos/$REPO/issues/$PR/comments" \
+            --jq '.[].body | capture("<!-- aphelion-responder round=(?<n>[0-9]+) -->") | .n' \
+            | sort -n | tail -n 1)
+          done_rounds=${done_rounds:-0}
+          echo "rounds done: $done_rounds of $RESPONDER_MAX_ROUNDS"
+          if [ "$done_rounds" -ge "$RESPONDER_MAX_ROUNDS" ]; then
+            echo "round cap reached; labelling review:exhausted for the owner"
+            gh api -X POST "repos/$REPO/issues/$PR/labels" -f 'labels[]=review:exhausted' >/dev/null
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=true" >> "$GITHUB_OUTPUT"
+            echo "round=$((done_rounds + 1))" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: steps.rounds.outputs.run == 'true'
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          # Full history: diff against main, rebase, pre-push overlap check.
+          fetch-depth: 0
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        if: steps.rounds.outputs.run == 'true'
+        with:
+          go-version-file: go.mod
+
+      # Same git hooks as local agents (ADR 0005): pre-commit message check and
+      # the pre-push overlap check.
+      - name: setup hooks
+        if: steps.rounds.outputs.run == 'true'
+        run: scripts/setup-hooks.sh
+
+      - uses: anthropics/claude-code-action@f27be6b65a4652f08a2ba3cff79114829b588967 # v1.0.252
+        if: steps.rounds.outputs.run == 'true'
+        env:
+          # Agent mode reads the working branch from CLAUDE_BRANCH; GITHUB_HEAD_REF
+          # is unset on review events.
+          CLAUDE_BRANCH: ${{ github.event.pull_request.head.ref }}
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          # Never '*' (ADR 0010); empty allows no bots.
+          allowed_bots: ${{ vars.REVIEW_BOT_LOGIN != '*' && vars.REVIEW_BOT_LOGIN || '' }}
+          # The action has no model input (action.yml at v1.0.252); the model is
+          # a CLI argument. Opus for implementation work: owner decision
+          # 2026-10-17. No --max-turns: the turn cap is an open decision.
+          claude_args: >-
+            --model claude-opus-5-5
+            --allowedTools "Read,Edit,Write,Glob,Grep,Bash(git *),Bash(gh *),Bash(make *),Bash(go *),Bash(scripts/*)"
+            --disallowedTools "Bash(gh pr review *),Bash(gh pr merge *),Bash(git push --force *),Bash(git push -f *)"
+          prompt: |
+            You are a fresh review responder for pull request #${{ github.event.pull_request.number }} in ${{ github.repository }}, branch ${{ github.event.pull_request.head.ref }}. This is responder round ${{ steps.rounds.outputs.round }} of at most ${{ env.RESPONDER_MAX_ROUNDS }}. You did not write this code and you have no handoff from whoever did; judge it on its merits.
+
+            Read all of these before changing anything:
+            1. The linked issue (the PR body says "Closes #N"): gh issue view N --comments
+            2. The PR body and every commit message: gh pr view ${{ github.event.pull_request.number }} --json title,body,commits
+            3. The change folder under openspec/changes/ for this branch, if one exists: proposal, design, tasks and delta specs.
+            4. The full diff: git diff origin/main...HEAD
+            5. Every review and every review comment, outdated ones included: gh api repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/reviews, gh api repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/comments and gh pr view ${{ github.event.pull_request.number }} --comments
+            6. CI results: gh pr checks ${{ github.event.pull_request.number }}, and gh run view <run-id> --log-failed for each failure.
+            7. The ADRs in docs/decisions/ and CLAUDE.md.
+
+            Then address every review comment that has no answer yet: fix the code when the comment is right, or reply on its thread with your reason when you decline it (gh api -X POST repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/comments/<comment-id>/replies -f body=...).
+
+            Rules:
+            - Never approve, request changes or merge, by any command.
+            - Never edit openspec/specs/ directly; living specs change only through openspec archive (ADR 0004).
+            - No unexplained constants: cite a spec requirement or an ADR, or write "Open decision" (ADR 0001).
+            - Never stage .claude/, .claude-pr/, CLAUDE.md, CLAUDE.local.md or .mcp.json; the action replaced them with the base branch's copies. Stage files by path, never with git add -A or git add .
+            - Commit messages are Conventional Commits, terse and lowercase, with no trailers.
+            - Run make check and fix what fails before you push.
+            - Push to the PR branch: git push origin HEAD:${{ github.event.pull_request.head.ref }}. If the pre-push hook refuses, do what it says (fetch, rebase onto origin/main, re-run make check, push with --force-with-lease). Never use --no-verify.
+
+            Finish by leaving exactly one PR comment (gh pr comment ${{ github.event.pull_request.number }} --body-file <file>) whose first line is exactly:
+            <!-- aphelion-responder round=${{ steps.rounds.outputs.round }} -->
+            followed by a short summary: what you changed, with commit SHAs, and which comments you declined, with the reason for each.
