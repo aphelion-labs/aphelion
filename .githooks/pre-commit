@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+# pre-commit: gofmt on staged Go files, shellcheck on staged shell scripts.
+# Checks the staged content (the index), not the working tree. ADR 0012 gives
+# this stage a budget of under 2 seconds (open to revision once measured).
+set -euo pipefail
+
+fail=0
+
+while IFS= read -r -d '' f; do
+  if [ -n "$(git show ":$f" | gofmt -l)" ]; then
+    echo "pre-commit: $f is not gofmt-formatted (run make fmt)" >&2
+    fail=1
+  fi
+done < <(git diff --cached --name-only --diff-filter=ACMR -z -- '*.go')
+
+shell_files=()
+while IFS= read -r -d '' f; do
+  shell_files+=("$f")
+done < <(git diff --cached --name-only --diff-filter=ACMR -z -- '*.sh' '*.bash' '.githooks/*')
+
+if [ ${#shell_files[@]} -gt 0 ]; then
+  if command -v shellcheck >/dev/null 2>&1; then
+    for f in "${shell_files[@]}"; do
+      if ! git show ":$f" | shellcheck -; then
+        echo "pre-commit: shellcheck failed on $f (output above refers to it as -)" >&2
+        fail=1
+      fi
+    done
+  else
+    echo "pre-commit: shellcheck not on PATH, skipping ${#shell_files[@]} staged shell file(s); install shellcheck to check them locally" >&2
+  fi
+fi
+
+exit "$fail"
