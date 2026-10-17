@@ -1,0 +1,105 @@
+# actions/labeler v7 rules (workflow: .github/workflows/labeler.yml).
+# Paths follow the planned layout: internal/<capability>/** for each
+# capability, cmd/** for the CLI entry point, and each capability's living
+# and delta specs (openspec/specs/<capability>/, openspec/changes/<id>/specs/
+# <capability>/, ADR 0004). Labels themselves come from
+# scripts/github-setup.sh.
+
+cap:hub:
+  - changed-files:
+      - any-glob-to-any-file:
+          - internal/hub/**
+          - openspec/specs/hub/**
+          - openspec/changes/*/specs/hub/**
+
+cap:daemon:
+  - changed-files:
+      - any-glob-to-any-file:
+          - internal/daemon/**
+          - openspec/specs/daemon/**
+          - openspec/changes/*/specs/daemon/**
+
+cap:mcp:
+  - changed-files:
+      - any-glob-to-any-file:
+          - internal/mcp/**
+          - openspec/specs/mcp/**
+          - openspec/changes/*/specs/mcp/**
+
+cap:hooks:
+  - changed-files:
+      - any-glob-to-any-file:
+          - internal/hooks/**
+          - openspec/specs/hooks/**
+          - openspec/changes/*/specs/hooks/**
+
+cap:overlap:
+  - changed-files:
+      - any-glob-to-any-file:
+          - internal/overlap/**
+          - openspec/specs/overlap/**
+          - openspec/changes/*/specs/overlap/**
+
+cap:messaging:
+  - changed-files:
+      - any-glob-to-any-file:
+          - internal/messaging/**
+          - openspec/specs/messaging/**
+          - openspec/changes/*/specs/messaging/**
+
+cap:knowledge:
+  - changed-files:
+      - any-glob-to-any-file:
+          - internal/knowledge/**
+          - openspec/specs/knowledge/**
+          - openspec/changes/*/specs/knowledge/**
+
+cap:tickets:
+  - changed-files:
+      - any-glob-to-any-file:
+          - internal/tickets/**
+          - openspec/specs/tickets/**
+          - openspec/changes/*/specs/tickets/**
+
+cap:tui:
+  - changed-files:
+      - any-glob-to-any-file:
+          - internal/tui/**
+          - openspec/specs/tui/**
+          - openspec/changes/*/specs/tui/**
+
+cap:cli:
+  - changed-files:
+      - any-glob-to-any-file:
+          - internal/cli/**
+          - cmd/**
+          - openspec/specs/cli/**
+          - openspec/changes/*/specs/cli/**
+
+cap:install:
+  - changed-files:
+      - any-glob-to-any-file:
+          - internal/install/**
+          - openspec/specs/install/**
+          - openspec/changes/*/specs/install/**
+
+area:ci:
+  - changed-files:
+      - any-glob-to-any-file:
+          - .github/**
+
+area:docs:
+  - changed-files:
+      - any-glob-to-any-file:
+          - docs/**
+
+area:specs:
+  - changed-files:
+      - any-glob-to-any-file:
+          - openspec/**
+
+area:deps:
+  - changed-files:
+      - any-glob-to-any-file:
+          - go.mod
+          - go.sum
