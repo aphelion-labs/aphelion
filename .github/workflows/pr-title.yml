@@ -1,0 +1,42 @@
+# The PR title becomes the squash commit message (squash_merge_commit_title
+# PR_TITLE, set by scripts/github-setup.sh), so it must be a Conventional
+# Commit, terse and lowercase (ADR 0010). Required status check: pr-title
+# (Blueprint, "Releases and changelog": a PR-title lint is a required check so
+# every squash commit parses).
+name: pr-title
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+
+concurrency:
+  group: pr-title-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  pull-requests: read
+
+jobs:
+  pr-title:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: amannn/action-semantic-pull-request@48f256284bd46cdaab1048c3721360e808335d50 # v6.1.1
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          # Types: the type: label family (Blueprint label taxonomy) plus build.
+          types: |
+            feat
+            fix
+            docs
+            chore
+            refactor
+            test
+            perf
+            ci
+            build
+            deps
+          # Lowercase subject: no capital letter anywhere (ADR 0010).
+          subjectPattern: ^[^A-Z]+$
+          subjectPatternError: |
+            The subject "{subject}" in "{title}" must be lowercase.
