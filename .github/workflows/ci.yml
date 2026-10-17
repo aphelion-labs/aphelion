@@ -1,0 +1,136 @@
+# CI repeats every local check stage (ADR 0012) after a push.
+# The job ids below are the required status check names that
+# scripts/github-setup.sh puts on main's ruleset; rename them in both places.
+#
+# Actions are pinned to the commit of an exact release tag (tag in the
+# trailing comment) so Dependabot can bump them and nothing floats.
+# Runner image ubuntu-24.04: its tool versions (Node 22.23.3, pipx 1.16.7)
+# were checked on 2026-10-17 in actions/runner-images Ubuntu2404-Readme.md.
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# One run per ref; a newer push cancels the older run on the same ref.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  # Tool pins. Dependency versions, not tunable values; bump each in its own PR
+  # after reading the release notes. Go, golangci-lint and OpenSpec pins live in
+  # go.mod and the Makefile, so CI calls make for those.
+  # gitleaks: latest release on 2026-10-17 (v8.30.1, MIT).
+  GITLEAKS_VERSION: 8.30.1
+  # shellcheck 0.11.0 (latest on 2026-10-17) via its PyPI wrapper; the image's
+  # own shellcheck is 0.9.0.
+  SHELLCHECK_PY_VERSION: 0.11.0.1
+
+jobs:
+  go:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+      - run: go build ./...
+      - run: go vet ./...
+      - name: go test
+        run: go test -race -coverprofile=coverage.out ./...
+      # Coverage is informational only until a baseline exists (Blueprint,
+      # "Coverage"); no threshold is enforced here.
+      - name: coverage (informational)
+        run: |
+          total=$(go tool cover -func=coverage.out | awk '$1 == "total:" { print $NF }')
+          echo "coverage: ${total:-none}"
+          echo "Coverage (informational, no threshold): ${total:-none}" >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: coverage
+          path: coverage.out
+          if-no-files-found: error
+
+  lint:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+      # golangci-lint runs through `go run` at the Makefile's pinned version, so
+      # CI and the local hooks use one pin.
+      - run: make lint
+      - run: make fmt-check
+
+  shell:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: shellcheck
+        run: |
+          git ls-files -z -- '*.sh' '*.bash' '.githooks/*' \
+            | xargs -0 -r pipx run --spec "shellcheck-py==${SHELLCHECK_PY_VERSION}" shellcheck
+
+  specs:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # check-specs.sh diffs from the merge base, which needs full history.
+          fetch-depth: 0
+          persist-credentials: false
+      # Living specs change only together with an archived change (ADR 0004).
+      - name: check-specs
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: scripts/check-specs.sh "$BASE_SHA" "$HEAD_SHA"
+      # openspec validate --all --strict at the Makefile's pin, telemetry off
+      # (ADR 0004). OpenSpec 1.14.2 needs Node >= 20.19.0 (package engines).
+      - run: make validate-specs
+
+  file-length:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: scripts/check-file-length.sh
+
+  # gitleaks CLI, not gitleaks/gitleaks-action: the action's README (v3.0.0)
+  # requires a GITLEAKS_LICENSE key for repositories owned by an organization,
+  # which aphelion-labs is. The CLI is MIT and needs no key. Open decision:
+  # switch to the action if the owner obtains the free key.
+  secrets:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # Scan the whole history, not only the tip.
+          fetch-depth: 0
+          persist-credentials: false
+      - name: install gitleaks
+        working-directory: ${{ runner.temp }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tarball="gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          sums="gitleaks_${GITLEAKS_VERSION}_checksums.txt"
+          gh release download "v${GITLEAKS_VERSION}" -R gitleaks/gitleaks -p "$tarball" -p "$sums"
+          grep " ${tarball}\$" "$sums" | sha256sum -c -
+          tar -xzf "$tarball" gitleaks
+      - name: gitleaks
+        run: '"$RUNNER_TEMP/gitleaks" git --redact --no-banner --verbose .'
