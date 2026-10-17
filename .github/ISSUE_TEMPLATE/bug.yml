@@ -1,0 +1,95 @@
+# Bug ticket (ADR 0004): cites the violated spec requirement. Code wrong: fix
+# the code, no change folder. Spec wrong or silent: change folder with a
+# MODIFIED or REMOVED delta, archived in the PR. Shape from the 05 PoC bug ticket.
+name: Bug
+description: The product does not do what a spec requirement says.
+labels: ["type:fix", "status:needs-triage"]
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: What goes wrong, in one or two sentences.
+    validations:
+      required: true
+  - type: textarea
+    id: discovered
+    attributes:
+      label: How it was discovered
+      description: Who or what noticed it, and while doing what.
+    validations:
+      required: true
+  - type: dropdown
+    id: reproducible
+    attributes:
+      label: Reproducible?
+      options:
+        - always
+        - sometimes
+        - once
+        - unknown
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      value: |
+        1.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected, per spec requirement
+      description: >-
+        Which requirement in which spec, for example
+        openspec/specs/session-board/spec.md, "Show session status", scenario
+        "Agent is blocked". Write "none" if no requirement covers it.
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual
+    validations:
+      required: true
+  - type: dropdown
+    id: spec-impact
+    attributes:
+      label: Spec impact
+      description: Decides whether the fix carries a change folder (ADR 0004). Confirmed at triage.
+      options:
+        - "Code is wrong: fix the code, no spec change"
+        - "Spec is wrong or silent: change folder with a delta"
+        - "Not sure"
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: aphelion version or commit, OS, terminal, tmux and Claude Code versions.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      value: |
+        - [ ] The cited scenario passes as an automated test
+    validations:
+      required: true
+  - type: textarea
+    id: dod
+    attributes:
+      label: Definition of done
+      value: |
+        - [ ] Regression test added, CI green
+        - [ ] Coverage reported
+        - [ ] Lint clean
+        - [ ] Docs updated
+        - [ ] No diff under openspec/specs/, or, if the spec was wrong, the change folder archived in the PR
+        - [ ] ADR written if a non-obvious decision was made
+    validations:
+      required: true
