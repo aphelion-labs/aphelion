@@ -1,0 +1,17 @@
+# Editor settings shared by everyone working in this repository.
+root = true
+
+[*]
+end_of_line = lf
+insert_final_newline = true
+
+[*.go]
+indent_style = tab
+
+# make requires a tab before every recipe line.
+[Makefile]
+indent_style = tab
+
+[*.{yml,yaml,json,md}]
+indent_style = space
+indent_size = 2

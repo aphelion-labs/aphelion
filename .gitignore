@@ -1,2 +1,7 @@
 # files kept out of the repo (reference docs, notes, scratch)
 local/
+
+# build and test outputs
+/bin/
+/aphelion
+/coverage.out
