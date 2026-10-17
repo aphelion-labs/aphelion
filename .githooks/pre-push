@@ -1,0 +1,51 @@
+#!/usr/bin/env bash
+# pre-push: go vet and short tests, then the overlap check (variant B from the
+# 04 PoC, ADR 0005). The overlap check refuses a push only when files changed on
+# the pushed branch also changed on origin/main since the merge base.
+# Intent (ADR 0012): the whole hook stays under about 100 seconds; that budget
+# comes from the owner's lecture notes and is open to revision once measured.
+set -u
+# comm needs both inputs sorted in the same collation (04 PoC fix).
+export LC_ALL=C
+zero=0000000000000000000000000000000000000000
+base_ref=origin/main
+
+# Read every ref first, so go vet and go test cannot consume git's stdin.
+pushed=0
+compare=()
+while read -r _local_ref local_sha remote_ref _remote_sha; do
+  [ "$local_sha" = "$zero" ] && continue            # branch deletion
+  pushed=1
+  [ "$remote_ref" = "refs/heads/main" ] && continue # pushes of main are not compared
+  compare+=("$local_sha")
+done
+[ "$pushed" -eq 0 ] && exit 0                       # only deletions
+
+if ! command -v go >/dev/null 2>&1; then
+  echo "pre-push: go is not on PATH; refusing" >&2
+  exit 1
+fi
+echo "pre-push: go vet ./..." >&2
+go vet ./... </dev/null || { echo "pre-push: go vet failed; refusing" >&2; exit 1; }
+echo "pre-push: go test -short ./..." >&2
+go test -short ./... </dev/null || { echo "pre-push: go test failed; refusing" >&2; exit 1; }
+
+# Nothing to compare (a push of main only): no fetch needed, which also lets the
+# very first push to an empty remote through.
+[ ${#compare[@]} -eq 0 ] && exit 0
+
+git fetch --quiet origin main </dev/null || { echo "pre-push: cannot fetch origin/main; refusing" >&2; exit 1; }
+rc=0
+for local_sha in "${compare[@]}"; do
+  mb=$(git merge-base "$base_ref" "$local_sha") || continue
+  overlap=$(comm -12 \
+    <(git diff --name-only --no-renames "$mb" "$local_sha" | sort -u) \
+    <(git diff --name-only --no-renames "$mb" "$base_ref" | sort -u))
+  if [ -n "$overlap" ]; then
+    echo "pre-push: main changed these files since you branched:" >&2
+    printf '%s\n' "$overlap" | sed 's/^/  /' >&2
+    echo "Run: git fetch origin && git rebase origin/main, resolve, re-test, then push with --force-with-lease" >&2
+    rc=1
+  fi
+done
+exit $rc

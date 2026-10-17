@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+# commit-msg: Conventional Commits subject, lowercase, no trailing period, and no
+# attribution trailers (ADR 0010 commit style; owner's instruction).
+set -euo pipefail
+
+msg_file="$1"
+# Drop comment lines and surrounding blank lines the way git will.
+msg=$(git stripspace --strip-comments <"$msg_file")
+subject=$(printf '%s\n' "$msg" | sed -n '1p')
+
+fail=0
+types='feat|fix|docs|chore|refactor|test|perf|ci|build|deps'
+if ! printf '%s\n' "$subject" | grep -Eq "^($types)(\([a-z0-9._/-]+\))?!?: [^ ].*$"; then
+  echo "commit-msg: subject must be 'type(scope)?!?: description' with type one of: ${types//|/, }" >&2
+  fail=1
+fi
+if printf '%s\n' "$subject" | grep -q '[A-Z]'; then
+  echo "commit-msg: subject must be lowercase" >&2
+  fail=1
+fi
+case "$subject" in
+  *.) echo "commit-msg: subject must not end with a period" >&2; fail=1 ;;
+esac
+# Trailer keys are case-insensitive in git, so match them that way.
+if printf '%s\n' "$msg" | grep -Eiq '^(Claude-Session|Co-Authored-By|Signed-off-by):'; then
+  echo "commit-msg: remove Claude-Session, Co-Authored-By and Signed-off-by lines" >&2
+  fail=1
+fi
+
+if [ "$fail" -ne 0 ]; then
+  echo "commit-msg: subject was: $subject" >&2
+  exit 1
+fi
