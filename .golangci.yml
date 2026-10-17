@@ -1,0 +1,35 @@
+# golangci-lint configuration, v2 schema (https://golangci-lint.run/docs/configuration/file/).
+# The golangci-lint version is pinned in the Makefile (GOLANGCI_LINT_VERSION).
+version: "2"
+
+linters:
+  # Nothing is enabled implicitly; every linter in use is listed below.
+  default: none
+  enable:
+    - errcheck # unchecked errors
+    - govet # the go vet analyzers
+    - ineffassign # assignments whose value is never used (part of golangci-lint's standard set)
+    - staticcheck # bugs, simplifications and style (includes the former gosimple and stylecheck)
+    - unused # unused constants, variables, functions and types
+    - mnd # unnamed number literals; every constant must cite a spec, an ADR or "Open decision" (ADR 0001)
+    - gocritic # bug, performance and style diagnostics
+    - revive # golint successor: naming, doc comments, style
+    - misspell # commonly misspelled English words in comments and strings
+  settings:
+    mnd:
+      # Open decision (ADR 0001): the mnd checks, ignored numbers and ignored functions.
+      # Until the owner decides, mnd runs with its defaults: checks argument, case,
+      # condition, operation, return and assign; 0, 1, 0.0 and 1.0 and _test.go files
+      # are always ignored.
+      checks:
+        - argument
+        - case
+        - condition
+        - operation
+        - return
+        - assign
+
+formatters:
+  enable:
+    - gofmt # standard Go formatting
+    - gofumpt # stricter superset of gofmt
