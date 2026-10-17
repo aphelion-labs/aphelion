@@ -1,0 +1,38 @@
+# release-please opens a release PR with the version bump and CHANGELOG built
+# from squash-merged Conventional Commit titles; merging it tags vX.Y.Z and
+# publishes a GitHub Release (Blueprint, "Releases and changelog").
+# Config: release-please-config.json and .release-please-manifest.json
+# (release-type go, package at the root, starting at 0.0.0). Pre-1.0 bumps use
+# release-please defaults: feat bumps minor, fix bumps patch (Blueprint).
+#
+# GoReleaser (binaries attached to the release) is deferred to a chore ticket.
+#
+# GITHUB_TOKEN trap: a release PR opened with GITHUB_TOKEN starts no workflows,
+# so ci and pr-title never report on it and its required checks stay pending.
+# Open decision: a RELEASE_PLEASE_TOKEN secret (GitHub App token or PAT). Until
+# it exists the job falls back to GITHUB_TOKEN and the owner merges the release
+# PR through the ruleset's pull-request bypass.
+name: release-please
+
+on:
+  push:
+    branches: [main]
+
+concurrency:
+  group: release-please
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+
+jobs:
+  release-please:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
+        with:
+          token: ${{ secrets.RELEASE_PLEASE_TOKEN || github.token }}
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
