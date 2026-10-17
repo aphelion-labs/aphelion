@@ -1,0 +1,37 @@
+# Chore ticket (ADR 0004): no change folder, living specs untouched.
+name: Chore
+description: Maintenance with no behaviour change (tooling, CI, refactors, dependencies).
+labels: ["type:chore", "status:needs-triage"]
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Why
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      value: |
+        - [ ]
+    validations:
+      required: true
+  - type: textarea
+    id: dod
+    attributes:
+      label: Definition of done
+      value: |
+        - [ ] CI green
+        - [ ] Lint clean
+        - [ ] Docs updated
+        - [ ] No diff under openspec/specs/
+        - [ ] ADR written if a non-obvious decision was made
+    validations:
+      required: true

@@ -1,0 +1,6 @@
+# Review routing (ADR 0004: the living specs belong to the owner). Not
+# enforced by the ruleset yet: agent PRs are opened under the owner's account,
+# and an author cannot approve their own PR (ADR 0011).
+openspec/specs/** @arnav-exe
+docs/decisions/** @arnav-exe
+.github/** @arnav-exe

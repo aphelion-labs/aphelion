@@ -1,0 +1,74 @@
+# Feature ticket (ADR 0004): gets a change folder openspec/changes/<issue>-<slug>/,
+# archived in the same PR. Shape from the 05 PoC feature ticket.
+name: Feature
+description: New or changed behaviour. Gets an OpenSpec change folder.
+labels: ["type:feat", "status:needs-triage"]
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: High-level description
+      description: What should the product do that it does not do today, and for whom?
+    validations:
+      required: true
+  - type: textarea
+    id: details
+    attributes:
+      label: Further details
+      description: Context, constraints, links, prior discussion. Optional.
+  - type: textarea
+    id: behaviour
+    attributes:
+      label: User-visible behaviour
+      description: What a user sees or does once this ships. The spec delta is written from this.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: One checkbox per testable outcome.
+      value: |
+        - [ ]
+    validations:
+      required: true
+  - type: textarea
+    id: dod
+    attributes:
+      label: Definition of done
+      value: |
+        - [ ] Tests added or updated, CI green
+        - [ ] Coverage reported
+        - [ ] Lint clean
+        - [ ] Docs updated
+        - [ ] Spec change folder archived in the PR
+        - [ ] ADR written if a non-obvious decision was made
+    validations:
+      required: true
+  - type: dropdown
+    id: capability
+    attributes:
+      label: Capability
+      description: The capability spec this changes. The owner sets the matching cap label at triage.
+      options:
+        - hub
+        - daemon
+        - mcp
+        - hooks
+        - overlap
+        - messaging
+        - knowledge
+        - tickets
+        - tui
+        - cli
+        - install
+    validations:
+      required: true
+  - type: textarea
+    id: dependencies
+    attributes:
+      label: Dependencies
+      description: Issues that must land first (#N), or "none".
+      value: none
+    validations:
+      required: true
