@@ -177,7 +177,7 @@ if [ "$mode" = propose ]; then
   prompt="/${skill_ns}issue-propose $issue"
   context="$context Stop as soon as the draft PR is open and the issue is labelled status:spec-review. Do not implement anything."
 else
-  prompt="Implement issue #$issue on branch $branch. If openspec/changes/$branch/ exists, implement its tasks.md; otherwise implement the issue's acceptance criteria. Run make check until it passes. Then run /${skill_ns}issue-finish $issue."
+  prompt="Follow the Start here section of CLAUDE.md before changing anything. Then implement issue #$issue on branch $branch. If openspec/changes/$branch/ exists, implement its tasks.md; otherwise implement the issue's acceptance criteria. Run make check until it passes. Then run /${skill_ns}issue-finish $issue."
   if [ "$rebased" = yes ]; then
     context="$context The branch was rebased onto origin/main before this run; if it was pushed before, push with --force-with-lease."
   fi
