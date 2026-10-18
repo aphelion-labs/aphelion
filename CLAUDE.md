@@ -4,6 +4,16 @@ aphelion is a shared workspace for teams of coding agents: a per-machine daemon,
 It is written in Go and ships as one static binary (ADR 0002); the hub API is agent-neutral, Claude Code first (ADR 0009).
 Status: pre-alpha, nothing runs yet. docs/product/overview.md explains the product.
 
+## Start here
+
+Before you design or write anything, read in this order:
+
+1. The GitHub issue you were given: description, acceptance criteria, definition of done, open decisions.
+2. `docs/product/overview.md`.
+3. `docs/decisions/README.md`, then every ADR it lists that touches your capability.
+4. The living spec for that capability, `openspec/specs/<capability>/spec.md`, if it exists.
+5. The change folder for your issue, `openspec/changes/<issue>-<slug>/`, if it exists: proposal.md, design.md and tasks.md are your plan.
+
 ## Where truth lives
 
 - What the product does: the living specs, `openspec/specs/<capability>/spec.md` (see openspec/README.md).
