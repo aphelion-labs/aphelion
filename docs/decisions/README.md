@@ -16,6 +16,8 @@ This folder records aphelion's architecture decisions, one decision per file, in
 | [0010](0010-agent-loop-and-fresh-review-responder.md) | Agent loop: local worktree pickup, one PR per ticket, fresh review responder on GitHub-hosted runners | proposed |
 | [0011](0011-pr-reviewer-bot.md) | PR reviewer bot in its own repository on the Anthropic API | proposed |
 | [0012](0012-repository-layout-and-shift-left-checks.md) | Repository layout and shift-left checks | proposed |
+| [0013](0013-daemon-package-layout-and-adapter-boundary.md) | Daemon package layout: agent-neutral core, one adapter package per agent | proposed |
+| [0014](0014-hook-receiver-runs-inside-the-daemon.md) | The hook receiver runs inside the daemon and keeps a hook log on disk | proposed |
 
 ## Process
 
