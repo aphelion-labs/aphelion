@@ -16,6 +16,7 @@ This folder records aphelion's architecture decisions, one decision per file, in
 | [0010](0010-agent-loop-and-fresh-review-responder.md) | Agent loop: local worktree pickup, one PR per ticket, fresh review responder on GitHub-hosted runners | proposed |
 | [0011](0011-pr-reviewer-bot.md) | PR reviewer bot in its own repository on the Anthropic API | proposed |
 | [0012](0012-repository-layout-and-shift-left-checks.md) | Repository layout and shift-left checks | proposed |
+| [0015](0015-ask-a-session-over-a2a.md) | Ask a session over the A2A protocol at the hub (amends 0009) | proposed |
 
 ## Process
 
