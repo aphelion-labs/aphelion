@@ -116,7 +116,7 @@ jobs:
         if: steps.rounds.outputs.run == 'true'
         run: scripts/setup-hooks.sh
 
-      - uses: anthropics/claude-code-action@f27be6b65a4652f08a2ba3cff79114829b588967 # v1.0.252
+      - uses: anthropics/claude-code-action@4fa93a88de49bbef68b10eb15aabedf28ca0e1ed # v1.0.271
         if: steps.rounds.outputs.run == 'true'
         env:
           # Agent mode reads the working branch from CLAUDE_BRANCH; GITHUB_HEAD_REF
