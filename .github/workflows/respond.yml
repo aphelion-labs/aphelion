@@ -105,7 +105,7 @@ jobs:
           # Full history: diff against main, rebase, pre-push overlap check.
           fetch-depth: 0
 
-      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+      - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
         if: steps.rounds.outputs.run == 'true'
         with:
           go-version-file: go.mod
@@ -116,7 +116,7 @@ jobs:
         if: steps.rounds.outputs.run == 'true'
         run: scripts/setup-hooks.sh
 
-      - uses: anthropics/claude-code-action@4fa93a88de49bbef68b10eb15aabedf28ca0e1ed # v1.0.271
+      - uses: anthropics/claude-code-action@e5812cd75691ca7bbfc57c0ecf4441db3a1ab7dd # v1.0.281
         if: steps.rounds.outputs.run == 'true'
         env:
           # Agent mode reads the working branch from CLAUDE_BRANCH; GITHUB_HEAD_REF
